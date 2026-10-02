@@ -7,10 +7,13 @@ authors = [
     { name = "p-libamadubos-ece", email = "pauldavid.libamadubos@edu.ece.fr" }
 ]
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "faker>=40.40.0",
+]
 
 [project.scripts]
-lab-uv1-libama = "lab_uv1_libama:main"
+dataset-users = "lab_uv1_libama.dataset_users:main"
+dataset-orders = "lab_uv1_libama.dataset_orders:main"
 
 [build-system]
 requires = ["uv_build>=0.12.10,<0.13.0"]
