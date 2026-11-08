@@ -1,0 +1,14 @@
+seeds:
+  - name: states
+    description: Codes of the US states, territories and military regions, from the Faker en_US address provider.
+    config:
+      column_types:
+        code: varchar
+        kind: varchar
+  - name: zip_ranges
+    description: Range of the 5 digits ZIP codes of each state, from the Faker en_US address provider.
+    config:
+      column_types:
+        state: varchar
+        zip_min: varchar
+        zip_max: varchar
