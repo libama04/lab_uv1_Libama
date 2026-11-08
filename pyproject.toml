@@ -8,12 +8,14 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = [
+    "duckdb>=2.0.0",
     "faker>=40.40.0",
 ]
 
 [project.scripts]
 dataset-users = "lab_uv1_libama.dataset_users:main"
 dataset-orders = "lab_uv1_libama.dataset_orders:main"
+orders-report = "lab_uv1_libama.orders_report:main"
 
 [build-system]
 requires = ["uv_build>=0.12.10,<0.13.0"]
