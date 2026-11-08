@@ -118,3 +118,56 @@ Orders without a user are kept, with `None` instead of being dropped.
 
 **Risk of `.collect()` on `enriched`?**
 The whole result goes to the driver: out of memory on a large dataset.
+
+## Lab: Bronze to silver with Spark DataFrames
+
+**What happens to a running job if the service restarts mid-lab?**
+The job dies with the driver: `local` mode runs inside the service's pod. On restart, new STS credentials are issued and the session must be recreated.
+
+**Why does `SimpleAWSCredentialsProvider` fail here?**
+It only sends the access and secret keys. Temporary STS credentials also need the session token, which only `TemporaryAWSCredentialsProvider` sends.
+
+**Explain the output of the state query.**
+Users per state, with the number of NULL cities. Military regions (AE, AP, AA) have no city: their `missing_city` equals their user count.
+
+**DataFrame or SQL?**
+SQL for a one-off exploration, quick to write. DataFrame API for a shared model: composable functions, checked at build time, testable and reusable.
+
+**Where else could an empty string silently produce a wrong result?**
+`state` and `zip_code`: `regexp_extract` also returns `""` on no match, counted as a group instead of NULL.
+
+**How many part-files under `users.parquet/`, and why?**
+1 per output partition. The dataset is small and read from a single CSV split: 1 partition, 1 file (plus `_SUCCESS`).
+
+**What do you lose with `coalesce(1)` on a larger dataset?**
+Parallelism: a single task writes everything, slowly, and readers cannot split the work.
+
+**Which files hold the data, which describe the table?**
+Parquet files in `data/` hold the rows. `metadata/` (metadata JSON, manifest lists, manifests, `version-hint.text`) describes schema, snapshots and files.
+
+**Overwrite while reading: Parquet vs Iceberg?**
+Parquet: the reader may see missing or mixed files, or fail. Iceberg: the reader keeps its snapshot; the new one becomes visible atomically after commit.
+
+**Two concurrent commits with a hadoop catalog?**
+Both may write the same next version: one commit is lost or the table is corrupted. A catalog service (REST, Nessie, Polaris) provides atomic compare-and-swap of the current version.
+
+**Schema differences? What about the missing UUID type?**
+dbt: `uuid` and `timestamp with time zone`. Spark: `varchar` and `timestamp`. UUIDs are stored as 36-char strings: larger, no type validation, consumers must cast.
+
+**One object (dbt) vs a directory of part-files (Spark)?**
+A single object is simpler to read. Part-files scale: written and read in parallel.
+
+**What replaced the dbt tests?**
+`assert` on counts and columns. Same guarantees need explicit checks: unique and not-null keys, accepted values, joins for relationships (or a library such as Great Expectations).
+
+**What plays the role of `ref()` and `source()`?**
+Python variables and the order of the cells: dependencies are implicit, no graph.
+
+**Why are build times not comparable?**
+Spark pays JVM startup, package download and S3A setup, and is built for distributed data. DuckDB is embedded and in-process. On such tiny data, overhead dominates.
+
+**10 GB, 10 TB, SQL-only analysts?**
+10 GB: dbt + DuckDB. 10 TB: Spark. SQL-only analysts: dbt (on DuckDB, or Spark/Trino when large).
+
+**Exercise 4: time travel, Iceberg vs Parquet**
+After the append, Iceberg shows 2,830 rows and `VERSION AS OF` the previous snapshot returns 2,829. The Parquet directory also shows 2,830 but keeps no history: the previous state cannot be read back.
