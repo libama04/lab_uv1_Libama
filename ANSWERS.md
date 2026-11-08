@@ -171,3 +171,29 @@ Spark pays JVM startup, package download and S3A setup, and is built for distrib
 
 **Exercise 4: time travel, Iceberg vs Parquet**
 After the append, Iceberg shows 2,830 rows and `VERSION AS OF` the previous snapshot returns 2,829. The Parquet directory also shows 2,830 but keeps no history: the previous state cannot be read back.
+
+## Lab: Explore Iceberg tables with Spark
+
+**Which files contain the rows? Which describe the table? Why more than Parquet?**
+Parquet files in `data/` hold the rows. `metadata/` describes the table: `vN.metadata.json` (schema, partitioning, snapshots), manifest lists and manifests (Avro, one entry per data file with stats), `version-hint.text`. Without them there is no schema history, no snapshot, no atomic commit, no file-level statistics.
+
+**How many snapshots and data files? What do snapshots add?**
+Ours started with several snapshots (one per write of the previous lab) and 1 data file. A snapshot records its id, parent, operation, commit time and summary (files and rows added or removed): history that plain Parquet files do not have.
+
+**After the append: snapshots, old files, why a new snapshot?**
+One more `append` snapshot. The original Parquet file is still there, untouched: a new file holds the 3 new rows. A new snapshot makes the change atomic and keeps the previous state readable.
+
+**What does time travel read? Why no copy? What if old files are deleted?**
+It reads the metadata of an older snapshot and only the data files it references. Snapshots share unchanged files, so nothing is copied. If those files were physically deleted (e.g. by `expire_snapshots`), that version could no longer be read.
+
+**Schema evolution: rewrite? where recorded? why table-level?**
+No rewrite: old files simply have no `source` value (read as NULL). The new schema is recorded in a new `metadata.json`. Columns are tracked by id at table level, so all files, old and new, are read consistently.
+
+**Compare Iceberg with Parquet**
+`silver/spark/orders.parquet/` is only a collection of Parquet files; `warehouse/silver/orders/` has metadata and snapshots. To replace a Parquet directory safely, write to a new path and switch readers to it. Iceberg makes a new state visible atomically by swapping the pointer to the new metadata file. A catalog is needed when several engines share a table: one source of truth for the current metadata location, with atomic commits and access control.
+
+**Exercise 6: Parquet vs Iceberg vs Iceberg catalog**
+Parquet: a columnar file format. Iceberg: a table format, metadata on top of Parquet files (snapshots, schema evolution, atomic commits). Iceberg catalog: a service mapping table names to their current metadata, coordinating commits between engines.
+
+**Note**
+The cleanup step (deleting `warehouse/`) was not run: the next lab (Polaris) registers `lab.silver.orders` from this warehouse.
