@@ -7,6 +7,21 @@ models:
         data_tests:
           - unique
           - not_null
+      - name: username_normalized
+        description: Username without leading and trailing spaces, in lowercase.
+        data_tests:
+          - unique
+          - not_null
+      - name: birthdate
+        description: Birthdate of the user, NULL when it is later than the first order of the user.
+      - name: birthdate_is_valid
+        description: Whether the original birthdate is not later than the first order of the user.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [true, false]
+                quote: false
       - name: email
         data_tests:
           - unique
@@ -40,13 +55,16 @@ models:
                 to: ref('stg_users')
                 field: user_id
       - name: quantity
+        description: Number of items ordered, a positive integer.
         data_tests:
+          - not_null
           - accepted_values:
               arguments:
                 values: [1, 2, 3, 4, 5]
                 quote: false
       - name: product
         data_tests:
+          - not_null
           - accepted_values:
               arguments:
                 values: ["bread", "brioche", "cookie", "croissant", "donut", "drink"]
